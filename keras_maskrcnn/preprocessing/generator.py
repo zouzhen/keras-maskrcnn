@@ -119,7 +119,11 @@ class Generator(keras.utils.Sequence):
                     annotations['bboxes'][invalid_indices, :]
                 ))
                 for k in annotations_group[index].keys():
-                    annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
+                    if type(annotations_group[index][k]) == list:
+                        for i in invalid_indices[::-1]:
+                            del annotations_group[index][k][i]
+                    else:
+                        annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
 
         return image_group, annotations_group
 
@@ -246,7 +250,7 @@ class Generator(keras.utils.Sequence):
 
             # add flattened mask
             for mask_index, mask in enumerate(annotations['masks']):
-                masks_batch[index, mask_index, 7:] = mask.flatten()
+                masks_batch[index, mask_index, 7:7 + (mask.shape[0] * mask.shape[1])] = mask.flatten()
 
         return list(batches) + [masks_batch]
 

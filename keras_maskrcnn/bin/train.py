@@ -82,7 +82,7 @@ def create_models(backbone_retinanet, num_classes, weights, freeze_backbone=Fals
     return model, training_model, prediction_model
 
 
-def create_callbacks(model, training_model, prediction_model, validation_generator, args):
+def create_callbacks(model, training_model, prediction_model, validation_generator, args, create_evaluation=Evaluate):
     callbacks = []
 
     # save the prediction model
@@ -96,7 +96,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             ),
             verbose=1
         )
-        checkpoint = RedirectModel(checkpoint, prediction_model)
+        checkpoint = RedirectModel(checkpoint, model)
         callbacks.append(checkpoint)
 
     tensorboard_callback = None
@@ -121,6 +121,8 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
             # use prediction model for evaluation
             evaluation = CocoEval(validation_generator)
+        elif create_evaluation:
+            evaluation = create_evaluation(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
         else:
             evaluation = Evaluate(validation_generator, tensorboard=tensorboard_callback, weighted_average=args.weighted_average)
         evaluation = RedirectModel(evaluation, prediction_model)
@@ -156,12 +158,14 @@ def create_generators(args):
             config=args.config
         )
 
-        validation_generator = CocoGenerator(
-            args.coco_path,
-            'val2017',
-            batch_size=args.batch_size,
-            config=args.config
-        )
+        validation_generator = None
+        if args.evaluation:
+            validation_generator = CocoGenerator(
+                args.coco_path,
+                'val2017',
+                batch_size=args.batch_size,
+                config=args.config
+            )
     elif args.dataset_type == 'csv':
         from ..preprocessing.csv_generator import CSVGenerator
 
